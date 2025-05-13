@@ -4,6 +4,11 @@ from mcp.types import Tool
 from typing import Optional
 import duckdb
 from pydantic import BaseModel
+import os
+from dotenv import load_dotenv
+import subprocess
+
+load_dotenv()
 
 # Initialize FastMCP server
 mcp = FastMCP("dataflow")
@@ -11,6 +16,7 @@ mcp = FastMCP("dataflow")
 class DataFlowSession:
     def __init__(self):
         self.data: Optional[pd.DataFrame]  = None
+        self.working_dir = os.environ.get("MCP_FILESYSTEM_DIR", None)
 
     async def load_data(self, file_path: str) -> str:
         try:
@@ -30,40 +36,56 @@ class DataFlowSession:
             return result.to_string()
         except Exception as e:
             return f"Error executing query: {str(e)}"
+        
+    async def create_new_project(self, project_name: str) -> str:
+        try:
+            project_dir = self.working_dir + "/" + project_name
+            # check if the project already exists
+            if os.path.exists(project_dir):
+                raise ValueError(f"Project {project_name} already exists.")
+            
+            os.mkdir(project_dir)
+            os.chdir(project_dir)
+            subprocess.run(["uv", "init", "."], check=True)
+            subprocess.run(["git", "init"], check=True)
+            subprocess.run(["mkdir", "data"], check=True)
+
+            return f"Project {project_name} created."
+        except Exception as e:
+            return f"Error creating project: {str(e)}"
     
 session = DataFlowSession()
 
 
-class LoadDataInput(BaseModel):
-    file_path: str
-
-class QueryDataInput(BaseModel):
-    query: str
-
 @mcp.tool()
 async def load_data(file_path: str) -> str:
+    """Load data from a file.
+
+    Args:
+        file_path: The absolute path to the file.
+    """
     return await session.load_data(file_path)
 
 
 @mcp.tool()
-async def query_data(query: str) -> str:
-    return await session.query_data(query)
+async def query_data(sql_query: str) -> str:
+    """Query the loaded data.
+
+    Args:
+        sql_query: A valid SQL query.
+    """
+    return await session.query_data(sql_query)
 
 
-@mcp.list_tools()
-async def list_tools() -> list[Tool]:
-    return [
-        Tool(
-            name="load_data",
-            description="Load data from a file.",
-            inputSchema=LoadDataInput
-        ),
-        Tool(
-            name="query_data",
-            description="Query the loaded data.",
-            inputSchema=QueryDataInput
-        )
-    ]
+@mcp.tool()
+async def create_new_project(project_name: str) -> str:
+    """Create a new project. This will create a new directory with the project name and initialize a git repository.
+
+    Args:
+        project_name: The name of the project.
+    """
+    return await session.create_new_project(project_name)
+
 
 if __name__ == "__main__":
     mcp.run(transport='stdio')
