@@ -1,5 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, add_messages, START
+from langchain_core.messages import SystemMessage
 from pydantic import BaseModel
 from typing import List, Annotated
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -44,7 +45,7 @@ def build_agent_graph(tools: List = []):
         llm = llm.bind_tools(tools)
 
     def assistant(state: AgentState) -> AgentState:
-        response = llm.invoke(state.messages)
+        response = llm.invoke([SystemMessage(content=system_prompt)] + state.messages)
         state.messages.append(response)
         return state
 
