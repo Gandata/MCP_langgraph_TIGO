@@ -1,5 +1,5 @@
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from langgraph.graph import StateGraph, add_messages, START, END
+from langgraph.graph import StateGraph
 from langchain_core.messages import HumanMessage, AIMessageChunk
 from typing import AsyncGenerator
 from my_mcp.config import mcp_config
@@ -40,12 +40,7 @@ async def main():
     async with MultiServerMCPClient(
         connections=mcp_config
     ) as client:
-        tools = client.get_tools()
-        print("Available Tools:")
-        for tool in tools:
-            print(tool.name + "\n" + tool.description, end='\n\n', flush=True)
-
-        graph = build_agent_graph(tools=tools)
+        graph = build_agent_graph(tools=client.get_tools())
 
         # pass a config with a thread_id to use memory
         graph_config = {
