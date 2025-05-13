@@ -1,3 +1,10 @@
+"""
+This file implements the client for our Langgraph Agent.
+
+Clients are responsible for interacting directly with MCP servers. This client is analagous to Cursor or 
+Claude Desktop and you would configure them in the same way as we're doing in my_mcp/mcp_config.json.
+"""
+
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.graph import StateGraph
 from langchain_core.messages import HumanMessage, AIMessageChunk
@@ -6,7 +13,20 @@ from my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
 
 
-async def stream_response(input: AgentState, graph: StateGraph, config: dict = {}) -> AsyncGenerator[str, None]:
+async def stream_response(
+        input: AgentState, graph: StateGraph, config: dict = {}
+        ) -> AsyncGenerator[str, None]:
+    """
+    Stream the response from the graph while parsing out tool calls.
+
+    Args:
+        input: The input to the graph.
+        graph: The graph to run.
+        config: The config to pass to the graph.
+
+    Yields:
+        A processed string from the graph's chunked response.
+    """
     async for message_chunk, metadata in graph.astream(
         input=input,
         stream_mode="messages",
@@ -55,13 +75,10 @@ async def main():
                 break
 
             print("\n ----  USER  ---- \n\n", user_input)
-
             print("\n ----  ASSISTANT  ---- \n\n")
 
             async for response in stream_response(
-                input = AgentState(
-                    messages=[HumanMessage(content=user_input)]
-                ),
+                input = AgentState(messages=[HumanMessage(content=user_input)]),
                 graph = graph, 
                 config = graph_config
                 ):
