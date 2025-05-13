@@ -13,7 +13,6 @@ dependencies = [
     "langgraph>=0.4.3",
     "mcp-server-git>=2025.1.14",
     "mcp[cli]>=1.8.0",
-    "npx>=0.1.6",
     "pandas>=2.2.3",
     "pydantic>=2.11.4",
     "python-dotenv>=1.1.0",
