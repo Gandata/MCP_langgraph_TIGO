@@ -1,0 +1,9 @@
+{
+    "dataflow": {
+        "command": "python",
+        "args": [
+            "/Users/kennethliao/projects/tutorials/mcp-intro/my_mcp/local_servers/dataflow.py"
+        ],
+        "transport": "stdio"
+    }
+}
