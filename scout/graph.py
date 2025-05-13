@@ -62,3 +62,10 @@ def build_agent_graph(tools: List = []):
     builder.add_edge("tools", "assistant")
 
     return builder.compile(checkpointer=MemorySaver())
+
+# visualize graph
+if __name__ == "__main__":
+    from IPython.display import display, Image
+    
+    graph = build_agent_graph()
+    display(Image(graph.get_graph().draw_mermaid_png()))
