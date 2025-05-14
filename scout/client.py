@@ -13,7 +13,7 @@ from my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
 
 
-async def stream_response(
+async def stream_graph_response(
         input: AgentState, graph: StateGraph, config: dict = {}
         ) -> AsyncGenerator[str, None]:
     """
@@ -77,7 +77,7 @@ async def main():
             print("\n ----  USER  ---- \n\n", user_input)
             print("\n ----  ASSISTANT  ---- \n\n")
 
-            async for response in stream_response(
+            async for response in stream_graph_response(
                 input = AgentState(messages=[HumanMessage(content=user_input)]),
                 graph = graph, 
                 config = graph_config
