@@ -40,7 +40,7 @@ Assist the customer in all aspects of their data science workflow.
 
 
 def build_agent_graph(tools: List = []):
-    llm = ChatOpenAI(model="gpt-4.1-mini-2025-04-14")
+    llm = ChatOpenAI(name="Scout", model="gpt-4.1-mini-2025-04-14")
     if tools:
         llm = llm.bind_tools(tools)
 
