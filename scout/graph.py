@@ -51,15 +51,15 @@ def build_agent_graph(tools: List = []):
 
     builder = StateGraph(AgentState)
 
-    builder.add_node(assistant)
+    builder.add_node("Scout", assistant)
     builder.add_node(ToolNode(tools))
 
-    builder.add_edge(START, "assistant")
+    builder.add_edge(START, "Scout")
     builder.add_conditional_edges(
-        "assistant",
+        "Scout",
         tools_condition,
     )
-    builder.add_edge("tools", "assistant")
+    builder.add_edge("tools", "Scout")
 
     return builder.compile(checkpointer=MemorySaver())
 
