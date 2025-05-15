@@ -1,8 +1,9 @@
 """
-This file implements the client for our Langgraph Agent.
+This file implements the MCP Client for our Langgraph Agent.
 
-Clients are responsible for interacting directly with MCP servers. This client is analagous to Cursor or 
-Claude Desktop and you would configure them in the same way as we're doing in my_mcp/mcp_config.json.
+MCP Clients are responsible for connecting and communicating with MCP servers. 
+This client is analagous to Cursor or Claude Desktop and you would configure them in the 
+same way by specifying the MCP server configuration in my_mcp/mcp_config.json.
 """
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -20,9 +21,9 @@ async def stream_graph_response(
     Stream the response from the graph while parsing out tool calls.
 
     Args:
-        input: The input to the graph.
+        input: The input for the graph.
         graph: The graph to run.
-        config: The config to pass to the graph.
+        config: The config to pass to the graph. Required for memory.
 
     Yields:
         A processed string from the graph's chunked response.
@@ -43,13 +44,12 @@ async def stream_graph_response(
 
                 tool_name = tool_chunk.get("name", "")
                 args = tool_chunk.get("args", "")
-
                 
                 if tool_name:
                     tool_call_str = f"\n\n< TOOL CALL: {tool_name} >\n\n"
-
                 if args:
                     tool_call_str = args
+
                 yield tool_call_str
             else:
                 yield message_chunk.content
@@ -57,10 +57,17 @@ async def stream_graph_response(
 
 
 async def main():
+    """
+    Initialize the MCP client and run the agent conversation loop.
+
+    The MultiServerMCPClient allows connection to multiple MCP servers using a single client and config.
+    """
     async with MultiServerMCPClient(
         connections=mcp_config
     ) as client:
-        graph = build_agent_graph(tools=client.get_tools())
+        # the get_tools() method returns a list of tools from all the connected servers
+        tools = client.get_tools()
+        graph = build_agent_graph(tools=tools)
 
         # pass a config with a thread_id to use memory
         graph_config = {
@@ -86,8 +93,8 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+    # only needed if running in an ipykernel
     import nest_asyncio
-
     nest_asyncio.apply()
 
     asyncio.run(main())
