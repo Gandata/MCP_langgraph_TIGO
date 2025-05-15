@@ -34,5 +34,14 @@
         "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${MCP_GITHUB_PAT}"
         }
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--access-token",
+        "${SUPABASE_PAT}"
+      ]
     }
 }
