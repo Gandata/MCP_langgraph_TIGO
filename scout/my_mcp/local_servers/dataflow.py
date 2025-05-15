@@ -58,8 +58,8 @@ session = DataFlowSession()
 
 
 @mcp.tool()
-async def load_data(file_path: str) -> str:
-    """Load data from a file.
+async def dataflow_load_data(file_path: str) -> str:
+    """Load data from a file into the session.
 
     Args:
         file_path: The absolute path to the file.
@@ -68,8 +68,8 @@ async def load_data(file_path: str) -> str:
 
 
 @mcp.tool()
-async def query_data(sql_query: str) -> str:
-    """Query the loaded data.
+async def dataflow_query_data(sql_query: str) -> str:
+    """Query the loaded data. The data must first be loaded using the dataflow_load_data tool. The data is in the table `data`. 
 
     Args:
         sql_query: A valid SQL query.
@@ -78,7 +78,7 @@ async def query_data(sql_query: str) -> str:
 
 
 @mcp.tool()
-async def create_new_project(project_name: str) -> str:
+async def dataflow_create_new_project(project_name: str) -> str:
     """Create a new project. This will create a new directory with the project name and initialize a git repository.
 
     Args:
