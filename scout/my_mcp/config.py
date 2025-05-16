@@ -12,7 +12,7 @@ load_dotenv()
 
 
 def resolve_env_vars(config: dict) -> dict:
-    for server_name, server_config in config.items():
+    for server_name, server_config in config["mcpServers"].items():
         for property in server_config.keys():
             if property == "env":
                 for key, value in server_config[property].items():
@@ -21,7 +21,7 @@ def resolve_env_vars(config: dict) -> dict:
                         env_var_value = os.environ.get(env_var_name, None)
                         if env_var_value is None:
                             raise ValueError(f"Environment variable {env_var_name} is not set")
-                        config[server_name][property][key] = env_var_value
+                        config["mcpServers"][server_name][property][key] = env_var_value
             if property == "args":
                 for i, arg in enumerate(server_config[property]):
                     if isinstance(arg, str) and arg.startswith("${"):
@@ -29,7 +29,7 @@ def resolve_env_vars(config: dict) -> dict:
                         env_var_value = os.environ.get(env_var_name, None)
                         if env_var_value is None:
                             raise ValueError(f"Environment variable {env_var_name} is not set")
-                        config[server_name][property][i] = env_var_value
+                        config["mcpServers"][server_name][property][i] = env_var_value
     return config
 
 
@@ -39,5 +39,5 @@ if not config_file.exists():
 
 with open(config_file, "r") as f:
     config = json.load(f)
-    
+
 mcp_config = resolve_env_vars(config)
