@@ -1,9 +1,7 @@
 import pandas as pd
 from mcp.server.fastmcp import FastMCP
-from mcp.types import Tool
 from typing import Optional
 import duckdb
-from pydantic import BaseModel
 import os
 from dotenv import load_dotenv
 import subprocess
@@ -49,6 +47,8 @@ class DataFlowSession:
             subprocess.run(["uv", "init", "."], check=True)
             subprocess.run(["git", "init"], check=True)
             subprocess.run(["mkdir", "data"], check=True)
+            subprocess.run(["git", "add", "."], check=True)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
 
             return f"Project {project_name} created."
         except Exception as e:
