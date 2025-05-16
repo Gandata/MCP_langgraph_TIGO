@@ -10,7 +10,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.graph import StateGraph
 from langchain_core.messages import HumanMessage, AIMessageChunk
 from typing import AsyncGenerator
-from my_mcp.config import mcp_config
+from scout.my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
 
 
