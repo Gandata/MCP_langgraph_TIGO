@@ -1,5 +1,5 @@
 """
-This file generates the config.json file for the MCP client.
+This file loads required secrets from the .env file into the mcp_config.
 """
 
 import os
