@@ -12,6 +12,9 @@ from langchain_core.messages import HumanMessage, AIMessageChunk
 from typing import AsyncGenerator
 from scout.my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
+import os
+import asyncio
+from pathlib import Path
 
 
 async def stream_graph_response(
@@ -56,40 +59,172 @@ async def stream_graph_response(
             continue
 
 
+async def upload_documents_to_qdrant(graph: StateGraph, data_folder: str = "data", collection_name: str = "knowledge_base"):
+    """
+    Upload all documents from the data folder to Qdrant vector database.
+    
+    Args:
+        graph: The graph instance with MCP tools
+        data_folder: Path to the folder containing documents to upload
+        collection_name: Name of the Qdrant collection to store documents
+    """
+    data_path = Path(data_folder)
+    if not data_path.exists():
+        print(f"Data folder '{data_folder}' does not exist.")
+        return
+    
+    # Supported file extensions
+    supported_extensions = {'.txt', '.md', '.py', '.json', '.csv', '.html', '.xml', '.docx', '.pdf'}
+    
+    files_to_process = []
+    for file_path in data_path.rglob('*'):
+        if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
+            files_to_process.append(file_path)
+    
+    if not files_to_process:
+        print(f"No supported documents found in '{data_folder}' folder.")
+        print(f"Supported extensions: {', '.join(supported_extensions)}")
+        return
+    
+    print(f"Found {len(files_to_process)} documents to upload to Qdrant...")
+    
+    for file_path in files_to_process:
+        try:
+            # Read file content
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            if not content.strip():
+                print(f"Skipping empty file: {file_path}")
+                continue
+            
+            # Create a message asking the assistant to store the document
+            metadata_str = f"filename: {file_path.name}, filepath: {str(file_path)}, extension: {file_path.suffix}"
+            prompt = f"Please store this document in the Qdrant vector database with collection name '{collection_name}'. Document content: {content}\n\nMetadata: {metadata_str}"
+            
+            # Use the graph to process the request
+            response = await graph.ainvoke(
+                AgentState(messages=[HumanMessage(content=prompt)]),
+                config={"configurable": {"thread_id": "document_upload"}}
+            )
+            
+            print(f"✓ Processed: {file_path.name}")
+            
+        except Exception as e:
+            print(f"✗ Failed to process {file_path.name}: {str(e)}")
+    
+    print(f"Document upload process completed!")
+
+
+async def search_documents_in_qdrant(graph: StateGraph, query: str, collection_name: str = "knowledge_base"):
+    """
+    Search for relevant documents in Qdrant based on a query.
+    
+    Args:
+        graph: The graph instance with MCP tools
+        query: The search query
+        collection_name: Name of the Qdrant collection to search
+        
+    Returns:
+        Search results from Qdrant
+    """
+    try:
+        # Create a message asking the assistant to search documents
+        prompt = f"Please search the Qdrant vector database in collection '{collection_name}' for information related to: {query}"
+        
+        # Use the graph to process the search request
+        response = await graph.ainvoke(
+            AgentState(messages=[HumanMessage(content=prompt)]),
+            config={"configurable": {"thread_id": "document_search"}}
+        )
+        
+        return response
+        
+    except Exception as e:
+        print(f"Error searching documents: {str(e)}")
+        return None
+
+
 async def main():
     """
     Initialize the MCP client and run the agent conversation loop.
 
     The MultiServerMCPClient allows connection to multiple MCP servers using a single client and config.
     """
-    async with MultiServerMCPClient(
+    # Create the client without using it as a context manager
+    client = MultiServerMCPClient(
         connections=mcp_config
-    ) as client:
-        # the get_tools() method returns a list of tools from all the connected servers
-        tools = client.get_tools()
-        graph = build_agent_graph(tools=tools)
+    )
+    
+    # Get tools using the new async method
+    tools = await client.get_tools()
+    graph = build_agent_graph(tools=tools)
 
-        # pass a config with a thread_id to use memory
-        graph_config = {
-            "configurable": {
-                "thread_id": "1"
-            }
+    # pass a config with a thread_id to use memory
+    graph_config = {
+        "configurable": {
+            "thread_id": "1"
         }
+    }
 
-        while True:
-            user_input = input("\n\nUSER: ")
-            if user_input in ["quit", "exit"]:
-                break
+    print("MCP Agent with Qdrant Vector Database")
+    print("=" * 50)
+    print("Available commands:")
+    print("  /upload     - Upload documents from data folder to Qdrant")
+    print("  /search     - Search documents in Qdrant")
+    print("  /help       - Show this help message")
+    print("  quit/exit   - Exit the program")
+    print("  Or just type your question to chat with the assistant")
+    print("=" * 50)
 
-            print("\n ----  USER  ---- \n\n", user_input)
-            print("\n ----  ASSISTANT  ---- \n\n")
-
-            async for response in stream_graph_response(
-                input = AgentState(messages=[HumanMessage(content=user_input)]),
-                graph = graph, 
-                config = graph_config
+    while True:
+        user_input = input("\nUSER: ").strip()
+        
+        if user_input.lower() in ["quit", "exit"]:
+            break
+        elif user_input == "/help":
+            print("\n Help:")
+            print("  /upload     - Upload all documents from the 'data' folder to Qdrant vector database")
+            print("  /search     - Search for information in the uploaded documents")
+            print("  quit/exit   - Exit the program")
+            print("  Or type any question to chat with the AI assistant")
+            continue
+        elif user_input == "/upload":
+            print("\n Uploading documents to Qdrant...")
+            await upload_documents_to_qdrant(graph, data_folder="data", collection_name="knowledge_base")
+            continue
+        elif user_input.startswith("/search "):
+            query = user_input[8:].strip()  # Remove "/search " prefix
+            if query:
+                print(f"\n Searching for: {query}")
+                print("\n ---- SEARCH RESULTS ----\n")
+                
+                async for response in stream_graph_response(
+                    input = AgentState(messages=[HumanMessage(content=f"Search the Qdrant vector database in collection 'knowledge_base' for information related to: {query}")]),
+                    graph = graph, 
+                    config = {"configurable": {"thread_id": "search"}}
                 ):
-                print(response, end="", flush=True)
+                    print(response, end="", flush=True)
+                print("\n")
+            else:
+                print("Please provide a search query. Example: /search python functions")
+            continue
+        elif user_input == "/search":
+            print("Please provide a search query. Example: /search python functions")
+            continue
+        elif user_input.startswith("/"):
+            print("Unknown command. Type /help for available commands.")
+            continue
+
+        print(f"\n ----  USER  ---- \n\n {user_input}")
+        print("\n ----  ASSISTANT  ---- \n\n")
+
+        async for response in stream_graph_response(
+            input = AgentState(messages=[HumanMessage(content=user_input)]),
+            graph = graph, 
+            config = graph_config
+            ):
+            print(response, end="", flush=True)
 
 if __name__ == "__main__":
     import asyncio

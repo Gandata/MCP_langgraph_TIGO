@@ -1,24 +1,28 @@
-# MCP-Langgraph Integration Tutorial
+# MCP-Langgraph para B2Bot
 
-This tutorial demonstrates how to integrate Model Context Protocol (MCP) servers with Langgraph agents to create powerful, tool-enabled AI applications. The project showcases a data science assistant named Scout that can help users manage their data science projects using various MCP-powered tools.
+Este proyecto consiste en la creación de un agente conversacional para el área B2B (y nómina), donde su función principal será responder preguntas acerca de la base de documentos de la empresa utilizando tecnologías de recuperación aumentada por generación (RAG).
 
-## Overview
+## Descripción General
 
-The project implements a conversational AI agent that:
-- Uses GPT-4.1 as the base model
-- Integrates with multiple MCP servers for different functionalities
-- Uses Langgraph for orchestrating the conversation flow
-- Provides a streaming interface for real-time responses
+Este proyecto implementa un agente conversacional inteligente que:
 
-## Prerequisites
+- Utiliza Google Gemini 2.0 Flash como modelo base (vía Google AI Studio)
+- Integra con múltiples servidores MCP para diferentes funcionalidades
+- Usa Langgraph para orquestar el flujo de conversación
+- Implementa Qdrant como base de datos vectorial para almacenar y buscar documentos
+- Proporciona una interfaz de streaming para respuestas en tiempo real
+- Permite cargar documentos automáticamente desde la carpeta `data/`
+- Ofrece búsqueda semántica en la base de conocimientos
+
+## Prerrequisitos
 
 - Python 3.13+
-- Node.js (for filesystem MCP server)
-- Docker (for GitHub MCP server)
+- Node.js (para servidores MCP externos)
 - UV package manager
-- OpenAI API key
+- Google AI Studio API key
+- Qdrant (opcional, si se usa servidor externo)
 
-## Project Structure
+## Estructura del Proyecto
 
 ```
 scout/
@@ -32,89 +36,145 @@ scout/
     └── local_servers/ # Custom MCP server implementations
 ```
 
-## Setup
+## Instalación
 
-1. Clone the repository:
+1. Clona el repositorio:
+
 ```bash
 git clone <repository-url>
-cd mcp-intro
+cd MCP_LANGGRAPH_TIGO
 ```
 
-2. Create and activate a virtual environment:
+2. Crea y activa el entorno virtual:
+
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+# En Windows:
+.venv\Scripts\activate
+# En Linux/Mac:
+source .venv/bin/activate
 ```
 
-3. Install dependencies:
+3. Instala las dependencias usando uv:
+
 ```bash
 uv pip install -e .
 ```
 
-4. Set up environment variables:
-Create a `.env` file with:
+4. Crea las variables de entorno:
+   Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+
 ```
-OPENAI_API_KEY=your_openai_api_key
-MCP_FILESYSTEM_DIR=/path/to/projects/directory
-MCP_GITHUB_PAT=your_github_personal_access_token
+GOOGLE_API_KEY=tu_llave_api_googleai
 ```
 
-## MCP Servers
+## Servidores MCP
 
-This project integrates with four MCP servers:
+Este proyecto integra varios servidores MCP para diferentes funcionalidades:
 
-1. **Dataflow Server**: Custom implementation for data loading and querying
-2. **Filesystem Server**: Uses `@modelcontextprotocol/server-filesystem` for file operations
-3. **Git Server**: Uses `mcp-server-git` for local git operations
-4. **GitHub Server**: Uses the official GitHub MCP server for GitHub operations
+1. **Servidor Dataflow**: Implementación personalizada para carga y consulta de datos
+2. **Servidor Weather**: Proporciona información meteorológica actual
+3. **Servidor Qdrant**: Base de datos vectorial para almacenamiento y búsqueda de documentos
+4. **Servidor Filesystem**: Utiliza `@modelcontextprotocol/server-filesystem` para operaciones de archivos
 
-## Usage
+## Uso
 
-1. Start the application:
+1. Inicia la aplicación:
+
 ```bash
 python -m scout.client
 ```
 
-2. Interact with Scout by typing your questions or requests. For example:
+2. Interactúa con B2Bot usando los siguientes comandos:
+
+### Comandos Disponibles:
+
+- `/upload` - Carga todos los documentos de la carpeta `data/` a la base de datos vectorial Qdrant
+- `/search <consulta>` - Busca información en los documentos cargados
+- `/help` - Muestra la ayuda con comandos disponibles
+- `quit` o `exit` - Termina el programa
+
+### Ejemplos de uso:
+
+**Cargar documentos:**
+
 ```
-USER: Can you help me set up a new data science project?
+USER: /upload
 ```
 
-3. Scout will use its tools to:
-- Create and manage project directories
-- Handle data loading and transformation
-- Manage version control
-- Interact with GitHub repositories
+**Buscar información:**
 
-4. Type 'quit' or 'exit' to end the session.
+```
+USER: /search funciones de python
+USER: /search políticas de recursos humanos
+```
 
-## How It Works
+**Conversación normal:**
 
-1. The `graph.py` file defines the Langgraph agent structure:
-- Sets up the system prompt and agent state
-- Configures the LLM (GPT-4)
-- Defines the conversation flow graph
+```
+USER: ¿Qué información tienes sobre RAG?
+USER: Explícame cómo funciona el fine-tuning según los documentos
+```
 
-2. The `client.py` file:
-- Initializes the MCP client with multiple servers
-- Handles streaming responses
-- Manages the interactive session
+3. B2Bot utilizará sus herramientas para:
 
-3. MCP servers provide tools for:
-- File system operations
-- Data manipulation
-- Git operations
-- GitHub interactions
+- Buscar en la base de conocimientos vectorial
+- Procesar y analizar documentos
+- Proporcionar respuestas contextuales basadas en los documentos de la empresa
+- Realizar consultas meteorológicas cuando sea necesario
 
-## Extending the Project
+4. Escribe 'quit' o 'exit' para terminar la sesión.
 
-You can extend this project by:
+## Cómo Funciona
 
-1. Adding new MCP servers in `my_mcp/local_servers/`
-2. Modifying the system prompt in `graph.py`
-3. Adding new tools to the agent
-4. Customizing the conversation flow
+### Arquitectura del Sistema
 
-## Contributing
+1. **`graph.py`** - Define la estructura del agente Langgraph:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+   - Configura el prompt del sistema y el estado del agente
+   - Configura el LLM (Google Gemini 2.0 Flash)
+   - Define el flujo del grafo de conversación
+
+2. **`client.py`** - Cliente principal:
+
+   - Inicializa el cliente MCP con múltiples servidores
+   - Maneja respuestas en streaming
+   - Gestiona la sesión interactiva
+   - Implementa funciones para cargar y buscar documentos en Qdrant
+
+3. **Servidores MCP** - Proporcionan herramientas para:
+   - Operaciones del sistema de archivos
+   - Manipulación de datos
+   - Búsqueda vectorial en Qdrant
+   - Consultas meteorológicas
+   - Procesamiento de documentos
+
+### Flujo de Trabajo RAG
+
+1. **Indexación**: Los documentos de la carpeta `data/` se procesan y almacenan en Qdrant
+2. **Consulta**: Las preguntas del usuario se convierten en embeddings
+3. **Recuperación**: Se buscan documentos similares en la base vectorial
+4. **Generación**: El LLM genera respuestas basadas en el contexto recuperado
+
+## Características Principales
+
+- **RAG (Retrieval-Augmented Generation)**: Combina búsqueda vectorial con generación de texto
+- **Streaming**: Respuestas en tiempo real con indicadores de herramientas
+- **Multi-servidor MCP**: Integración con múltiples servidores para diferentes funcionalidades
+- **Base de conocimientos**: Indexación automática de documentos empresariales
+- **Interfaz conversacional**: Chat intuitivo con comandos especiales
+
+## Comentarios Adicionales
+
+Este proyecto fue modificado y adaptado del tutorial de kenneth-liao sobre agentes MCP para crear un sistema RAG especializado en el área B2B de la empresa.
+
+### Próximas Mejoras
+
+- Migración a Mistral-7B con vLLM para mayor control local
+- Expansión de tipos de documentos soportados
+- Implementación de métricas de relevancia
+- Interfaz web para gestión de documentos
+
+### Comentarios adicionales
+
+Este proyecto está basado en el tutorial de kenneth-liao de mcp-intro

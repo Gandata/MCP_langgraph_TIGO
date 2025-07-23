@@ -40,4 +40,6 @@ if not config_file.exists():
 with open(config_file, "r") as f:
     config = json.load(f)
 
-mcp_config = resolve_env_vars(config)
+resolved_config = resolve_env_vars(config)
+# Extract the mcpServers dictionary for MultiServerMCPClient
+mcp_config = resolved_config["mcpServers"]

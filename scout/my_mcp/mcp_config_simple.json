@@ -7,6 +7,13 @@
             ],
             "transport": "stdio"
         },
+        "weather": {
+            "command": "python",
+            "args": [                
+                "C:\\Users\\usuario\\Desktop\\MCP agente\\MCP_langgraph_TIGO\\scout\\my_mcp\\local_servers\\weather.py"
+            ],
+            "transport": "stdio"
+        },
         "qdrant": {
             "command": "uvx",
             "args": ["mcp-server-qdrant"],

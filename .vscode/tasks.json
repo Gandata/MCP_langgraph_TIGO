@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run MCP Scout Client",
+			"type": "shell",
+			"command": "powershell.exe",
+			"args": [
+				"-Command",
+				"Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass; .venv\\Scripts\\activate; python -m scout.client"
+			],
+			"group": "build",
+			"isBackground": false,
+			"problemMatcher": []
+		}
+	]
+}

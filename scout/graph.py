@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.graph import StateGraph, add_messages, START
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel
@@ -16,7 +16,7 @@ class AgentState(BaseModel):
 def build_agent_graph(tools: List[BaseTool] = []):
 
     system_prompt = """
-Your name is Scout and you are an expert data scientist. You help customers manage their data science projects by leveraging the tools available to you. Your goal is to collaborate with the customer in incrementally building their analysis or data modeling project. Version control is a critical aspect of this project, so you must use the git tools to manage the project's version history and maintain a clean, easy to understand commit history.
+Your name is scout and you are an expert data scientist. You help customers manage their data science projects by leveraging the tools available to you. Your goal is to collaborate with the customer in incrementally building their analysis or data modeling project. Version control is a critical aspect of this project, so you must use the git tools to manage the project's version history and maintain a clean, easy to understand commit history.
 
 <filesystem>
 You have access to a set of tools that allow you to interact with the user's local filesystem. 
@@ -64,7 +64,12 @@ main.py should only be used to implement permanent changes to the data - to be c
 Assist the customer in all aspects of their data science workflow.
 """
 
-    llm = ChatOpenAI(name="Scout", model="gpt-4.1-mini-2025-04-14")
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        temperature=0.1,
+        max_output_tokens=8192,
+        google_api_key=os.environ.get("GOOGLE_API_KEY")
+    )
     if tools:
         llm = llm.bind_tools(tools)
         #inject tools into system prompt
@@ -81,15 +86,15 @@ Assist the customer in all aspects of their data science workflow.
 
     builder = StateGraph(AgentState)
 
-    builder.add_node("Scout", assistant)
+    builder.add_node("scout", assistant)
     builder.add_node(ToolNode(tools))
 
-    builder.add_edge(START, "Scout")
+    builder.add_edge(START, "scout")
     builder.add_conditional_edges(
-        "Scout",
+        "scout",
         tools_condition,
     )
-    builder.add_edge("tools", "Scout")
+    builder.add_edge("tools", "scout")
 
     return builder.compile(checkpointer=MemorySaver())
 
