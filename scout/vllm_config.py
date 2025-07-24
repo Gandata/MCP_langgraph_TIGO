@@ -8,15 +8,26 @@ import os
 from typing import Dict, Any
 
 # Default vLLM Configuration
+# VLLM_CONFIG = {
+#     "api_base_url": os.getenv("VLLM_API_ENDPOINT"),
+#     "api_embed_url": os.getenv("VLLM_API_EMBED"),
+#     "api_key": "EMPTY",  # vLLM doesn't require API key for local deployments
+#     "model_name": os.getenv("VLLM_MODEL_NAME"),
+#     "embed_model_name": os.getenv("VLLM_EMBED_MODEL_NAME"),
+#     "temperature": float(os.getenv("VLLM_TEMPERATURE")),
+#     "max_tokens": int(os.getenv("VLLM_MAX_TOKENS")),
+#     "timeout": int(os.getenv("VLLM_TIMEOUT")),
+# }
+
 VLLM_CONFIG = {
-    "api_base_url": os.getenv("VLLM_API_ENDPOINT", "http://192.168.1.10:8002"),
-    "api_embed_url": os.getenv("VLLM_API_EMBED", "http://192.168.1.10:8003/embed"),
+    "api_base_url": "http://192.168.1.10:8002",
+    "api_embed_url": "http://192.168.1.10:8003/embed",
     "api_key": "EMPTY",  # vLLM doesn't require API key for local deployments
-    "model_name": os.getenv("VLLM_MODEL_NAME", "meta-llama/Llama-3-8B-Instruct"),  # Default model
-    "embed_model_name": os.getenv("VLLM_EMBED_MODEL_NAME", "sentence-transformers/all-MiniLM-L6-v2"),
-    "temperature": float(os.getenv("VLLM_TEMPERATURE", "0.1")),
-    "max_tokens": int(os.getenv("VLLM_MAX_TOKENS", "8192")),
-    "timeout": int(os.getenv("VLLM_TIMEOUT", "60")),
+    "model_name": "Mistral-7B-Instruct-Raft-Wifi",
+    "embed_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "temperature": 0.1,
+    "max_tokens": 2500,
+    "timeout": 60,
 }
 
 def get_vllm_config() -> Dict[str, Any]:

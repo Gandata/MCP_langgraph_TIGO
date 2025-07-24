@@ -58,10 +58,6 @@ You will primarily work on this file to complete the user's requests.
 main.py should only be used to implement permanent changes to the data - to be commited to git. 
 </code>
 
-<tools>
-{tools}
-</tools>
-
 Assist the customer in all aspects of their data science workflow.
 """
 
@@ -81,31 +77,30 @@ Assist the customer in all aspects of their data science workflow.
         max_tokens=vllm_config["max_tokens"],
         timeout=vllm_config["timeout"],
     )
+    
+    # Use native vLLM tool calling with OpenAI format - requires vLLM server to be started with proper flags
     if tools:
         llm = llm.bind_tools(tools)
-        #inject tools into system prompt
-        tools_json = [tool.model_dump_json(include=["name", "description"]) for tool in tools]
-        system_prompt = system_prompt.format(
-            tools="\n".join(tools_json), 
-            working_dir=os.environ.get("MCP_FILESYSTEM_DIR")
-            )
 
     def assistant(state: AgentState) -> AgentState:
-        response = llm.invoke([SystemMessage(content=system_prompt)] + state.messages)
+        response = llm.invoke([SystemMessage(content=system_prompt.format(working_dir=os.environ.get("MCP_FILESYSTEM_DIR", "Not set")))] + state.messages)
         state.messages.append(response)
         return state
 
     builder = StateGraph(AgentState)
-
     builder.add_node("scout", assistant)
-    builder.add_node(ToolNode(tools))
-
-    builder.add_edge(START, "scout")
-    builder.add_conditional_edges(
-        "scout",
-        tools_condition,
-    )
-    builder.add_edge("tools", "scout")
+    
+    # Add tool node only if tools are available
+    if tools:
+        builder.add_node("tools", ToolNode(tools))
+        builder.add_edge(START, "scout")
+        builder.add_conditional_edges(
+            "scout",
+            tools_condition,
+        )
+        builder.add_edge("tools", "scout")
+    else:
+        builder.add_edge(START, "scout")
 
     return builder.compile(checkpointer=MemorySaver())
 
