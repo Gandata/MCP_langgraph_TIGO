@@ -4,6 +4,8 @@ This file implements the MCP Client for our Langgraph Agent.
 MCP Clients are responsible for connecting and communicating with MCP servers. 
 This client is analagous to Cursor or Claude Desktop and you would configure them in the 
 same way by specifying the MCP server configuration in my_mcp/mcp_config.json.
+
+This version is configured to work with vLLM as the backend LLM provider.
 """
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -12,6 +14,7 @@ from langchain_core.messages import HumanMessage, AIMessageChunk
 from typing import AsyncGenerator
 from scout.my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
+from scout.vllm_config import get_vllm_config, print_vllm_config
 import os
 import asyncio
 from pathlib import Path
@@ -160,6 +163,9 @@ async def main():
     tools = await client.get_tools()
     graph = build_agent_graph(tools=tools)
 
+    # Get vLLM configuration for display
+    vllm_config = get_vllm_config()
+
     # pass a config with a thread_id to use memory
     graph_config = {
         "configurable": {
@@ -167,15 +173,19 @@ async def main():
         }
     }
 
-    print("MCP Agent with Qdrant Vector Database")
-    print("=" * 50)
+    print("MCP Agent with Qdrant Vector Database (Powered by vLLM)")
+    print("=" * 60)
     print("Available commands:")
     print("  /upload     - Upload documents from data folder to Qdrant")
     print("  /search     - Search documents in Qdrant")
+    print("  /config     - Show vLLM configuration")
     print("  /help       - Show this help message")
     print("  quit/exit   - Exit the program")
     print("  Or just type your question to chat with the assistant")
-    print("=" * 50)
+    print("=" * 60)
+    print(f"vLLM Endpoint: {vllm_config['api_base_url']}")
+    print(f"vLLM Model: {vllm_config['model_name']}")
+    print("=" * 60)
 
     while True:
         user_input = input("\nUSER: ").strip()
@@ -186,8 +196,13 @@ async def main():
             print("\n Help:")
             print("  /upload     - Upload all documents from the 'data' folder to Qdrant vector database")
             print("  /search     - Search for information in the uploaded documents")
+            print("  /config     - Show current vLLM configuration")
             print("  quit/exit   - Exit the program")
-            print("  Or type any question to chat with the AI assistant")
+            print("  Or type any question to chat with the AI assistant (powered by vLLM)")
+            continue
+        elif user_input == "/config":
+            print("\n vLLM Configuration:")
+            print_vllm_config()
             continue
         elif user_input == "/upload":
             print("\n Uploading documents to Qdrant...")

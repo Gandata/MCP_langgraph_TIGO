@@ -1,4 +1,4 @@
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, add_messages, START
 from langchain_core.messages import SystemMessage
 from pydantic import BaseModel
@@ -7,6 +7,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import MemorySaver
 from langchain.tools import BaseTool
 import os
+from scout.vllm_config import get_vllm_config, validate_vllm_config
 
 
 class AgentState(BaseModel):
@@ -64,11 +65,21 @@ main.py should only be used to implement permanent changes to the data - to be c
 Assist the customer in all aspects of their data science workflow.
 """
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0.1,
-        max_output_tokens=8192,
-        google_api_key=os.environ.get("GOOGLE_API_KEY")
+    # Get vLLM configuration
+    vllm_config = get_vllm_config()
+    
+    # Validate configuration
+    if not validate_vllm_config():
+        print("Warning: vLLM configuration may be incomplete")
+    
+    # Use ChatOpenAI with vLLM endpoint
+    llm = ChatOpenAI(
+        base_url=f"{vllm_config['api_base_url']}/v1",
+        api_key=vllm_config["api_key"],
+        model=vllm_config["model_name"],
+        temperature=vllm_config["temperature"],
+        max_tokens=vllm_config["max_tokens"],
+        timeout=vllm_config["timeout"],
     )
     if tools:
         llm = llm.bind_tools(tools)

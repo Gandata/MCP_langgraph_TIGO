@@ -17,3 +17,6 @@ wheels/
 
 # node
 node_modules
+
+# IDEs
+.vscode/
