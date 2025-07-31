@@ -24,7 +24,6 @@ nest_asyncio.apply()
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from scout.my_mcp.config import mcp_config
 from scout.graph import build_agent_graph, AgentState
-from scout.client import cargar_documentos_a_qdrant
 from langchain_core.messages import HumanMessage, AIMessageChunk
 
 
@@ -333,18 +332,6 @@ def main():
         
         # Botones de utilidad
         st.sidebar.header("🛠️ Utilidades")
-        
-        if st.sidebar.button("📁 Cargar Documentos", type="primary"):
-            with st.spinner("Cargando documentos..."):
-                try:
-                    result = asyncio.run(cargar_documentos_a_qdrant(
-                        st.session_state.grafo, 
-                        carpeta_datos="data", 
-                        nombre_coleccion="knowledge_base"
-                    ))
-                    st.sidebar.success("✅ Documentos cargados")
-                except Exception as e:
-                    st.sidebar.error(f"❌ Error: {str(e)}")
         
         if st.sidebar.button("🗑️ Limpiar Chat"):
             st.session_state.messages = []

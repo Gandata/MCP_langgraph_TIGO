@@ -59,92 +59,6 @@ async def stream_graph_response(
             continue
 
 
-async def cargar_documentos_a_qdrant(grafo: StateGraph, carpeta_datos: str = "data", nombre_coleccion: str = "knowledge_base"):
-    """
-    Carga todos los documentos desde la carpeta de datos a la base de datos vectorial Qdrant.
-    
-    Args:
-        grafo: La instancia del grafo con herramientas MCP
-        carpeta_datos: Ruta a la carpeta que contiene los documentos a cargar
-        nombre_coleccion: Nombre de la colección Qdrant para almacenar documentos
-    """
-    ruta_datos = Path(carpeta_datos)
-    if not ruta_datos.exists():
-        print(f"La carpeta de datos '{carpeta_datos}' no existe.")
-        return
-    
-    # Extensiones de archivo soportadas
-    extensiones_soportadas = {'.txt', '.md', '.py', '.json', '.csv', '.html', '.xml', '.docx', '.pdf'}
-    
-    archivos_a_procesar = []
-    for ruta_archivo in ruta_datos.rglob('*'):
-        if ruta_archivo.is_file() and ruta_archivo.suffix.lower() in extensiones_soportadas:
-            archivos_a_procesar.append(ruta_archivo)
-    
-    if not archivos_a_procesar:
-        print(f"No se encontraron documentos compatibles en la carpeta '{carpeta_datos}'.")
-        print(f"Extensiones soportadas: {', '.join(extensiones_soportadas)}")
-        return
-    
-    print(f"Se encontraron {len(archivos_a_procesar)} documentos para cargar en Qdrant...")
-    
-    for ruta_archivo in archivos_a_procesar:
-        try:
-            # Leer contenido del archivo
-            with open(ruta_archivo, 'r', encoding='utf-8') as f:
-                contenido = f.read()
-            
-            if not contenido.strip():
-                print(f"Saltando archivo vacío: {ruta_archivo}")
-                continue
-            
-            # Crear un mensaje pidiendo al asistente que almacene el documento
-            metadata_str = f"nombre_archivo: {ruta_archivo.name}, ruta_archivo: {str(ruta_archivo)}, extension: {ruta_archivo.suffix}"
-            prompt = f"Por favor almacena este documento en la base de datos vectorial Qdrant con el nombre de colección '{nombre_coleccion}'. Contenido del documento: {contenido}\n\nMetadatos: {metadata_str}"
-            
-            # Usar el grafo para procesar la solicitud
-            respuesta = await grafo.ainvoke(
-                AgentState(messages=[HumanMessage(content=prompt)]),
-                config={"configurable": {"thread_id": "carga_documentos"}}
-            )
-            
-            print(f"✓ Procesado: {ruta_archivo.name}")
-            
-        except Exception as e:
-            print(f"✗ Error al procesar {ruta_archivo.name}: {str(e)}")
-    
-    print(f"¡Proceso de carga de documentos completado!")
-
-
-async def buscar_documentos_en_qdrant(grafo: StateGraph, consulta: str, nombre_coleccion: str = "knowledge_base"):
-    """
-    Busca documentos relevantes en Qdrant basándose en una consulta.
-    
-    Args:
-        grafo: La instancia del grafo con herramientas MCP
-        consulta: La consulta de búsqueda
-        nombre_coleccion: Nombre de la colección Qdrant a buscar
-        
-    Returns:
-        Resultados de búsqueda desde Qdrant
-    """
-    try:
-        # Crear un mensaje pidiendo al asistente que busque documentos
-        prompt = f"Por favor busca en la base de datos vectorial Qdrant en la colección '{nombre_coleccion}' información relacionada con: {consulta}"
-        
-        # Usar el grafo para procesar la solicitud de búsqueda
-        respuesta = await grafo.ainvoke(
-            AgentState(messages=[HumanMessage(content=prompt)]),
-            config={"configurable": {"thread_id": "busqueda_documentos"}}
-        )
-        
-        return respuesta
-        
-    except Exception as e:
-        print(f"Error al buscar documentos: {str(e)}")
-        return None
-
-
 async def main():
     """
     Inicializa el cliente MCP y ejecuta el bucle de conversación del agente.
@@ -189,29 +103,7 @@ async def main():
             print("  salir/exit   - Salir del programa")
             print("  O escribe cualquier pregunta para conversar con el asistente de IA")
             continue
-        elif entrada_usuario == "/cargar":
-            print("\n Cargando documentos a Qdrant...")
-            await cargar_documentos_a_qdrant(grafo, carpeta_datos="data", nombre_coleccion="knowledge_base")
-            continue
-        elif entrada_usuario.startswith("/buscar "):
-            consulta = entrada_usuario[8:].strip()  # Remover prefijo "/buscar "
-            if consulta:
-                print(f"\n Buscando: {consulta}")
-                print("\n ---- RESULTADOS DE BÚSQUEDA ----\n")
-                
-                async for respuesta in stream_graph_response(
-                    input = AgentState(messages=[HumanMessage(content=f"Busca en la base de datos vectorial Qdrant en la colección 'knowledge_base' información relacionada con: {consulta}")]),
-                    grafo = grafo, 
-                    config = {"configurable": {"thread_id": "busqueda"}}
-                ):
-                    print(respuesta, end="", flush=True)
-                print("\n")
-            else:
-                print("Por favor proporciona una consulta de búsqueda. Ejemplo: /buscar funciones python")
-            continue
-        elif entrada_usuario == "/buscar":
-            print("Por favor proporciona una consulta de búsqueda. Ejemplo: /buscar funciones python")
-            continue
+        
         elif entrada_usuario.startswith("/"):
             print("Comando desconocido. Escribe /ayuda para ver los comandos disponibles.")
             continue

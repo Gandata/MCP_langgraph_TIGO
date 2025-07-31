@@ -105,3 +105,4 @@ if __name__ == "__main__":
     
     graph = build_agent_graph()
     display(Image(graph.get_graph().draw_mermaid_png()))
+    graph.get_graph().draw_mermaid_png(output_file_path = "agent_graph.png")
