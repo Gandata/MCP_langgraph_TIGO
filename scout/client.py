@@ -1,9 +1,9 @@
 """
-This file implements the MCP Client for our Langgraph Agent.
+Este archivo implementa el Cliente MCP para nuestro Agente Langgraph.
 
-MCP Clients are responsible for connecting and communicating with MCP servers. 
-This client is analagous to Cursor or Claude Desktop and you would configure them in the 
-same way by specifying the MCP server configuration in my_mcp/mcp_config.json.
+Los Clientes MCP son responsables de conectarse y comunicarse con los servidores MCP.
+Este cliente es análogo a Cursor o Claude Desktop y lo configurarías de la misma manera
+especificando la configuración del servidor MCP en my_mcp/mcp_config.json.
 """
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
@@ -18,217 +18,218 @@ from pathlib import Path
 
 
 async def stream_graph_response(
-        input: AgentState, graph: StateGraph, config: dict = {}
+        entrada: AgentState, grafo: StateGraph, config: dict = {}
         ) -> AsyncGenerator[str, None]:
     """
-    Stream the response from the graph while parsing out tool calls.
+    Transmite la respuesta del grafo mientras analiza las llamadas a herramientas.
 
     Args:
-        input: The input for the graph.
-        graph: The graph to run.
-        config: The config to pass to the graph. Required for memory.
+        entrada: La entrada para el grafo.
+        grafo: El grafo a ejecutar.
+        config: La configuración a pasar al grafo. Requerida para la memoria.
 
     Yields:
-        A processed string from the graph's chunked response.
+        Una cadena procesada de la respuesta fragmentada del grafo.
     """
-    async for message_chunk, metadata in graph.astream(
-        input=input,
+    async for fragmento_mensaje, metadata in grafo.astream(
+        input=entrada,
         stream_mode="messages",
         config=config
         ):
-        if isinstance(message_chunk, AIMessageChunk):
-            if message_chunk.response_metadata:
-                finish_reason = message_chunk.response_metadata.get("finish_reason", "")
-                if finish_reason == "tool_calls":
+        if isinstance(fragmento_mensaje, AIMessageChunk):
+            if fragmento_mensaje.response_metadata:
+                motivo_finalizacion = fragmento_mensaje.response_metadata.get("finish_reason", "")
+                if motivo_finalizacion == "tool_calls":
                     yield "\n\n"
 
-            if message_chunk.tool_call_chunks:
-                tool_chunk = message_chunk.tool_call_chunks[0]
+            if fragmento_mensaje.tool_call_chunks:
+                fragmento_herramienta = fragmento_mensaje.tool_call_chunks[0]
 
-                tool_name = tool_chunk.get("name", "")
-                args = tool_chunk.get("args", "")
+                nombre_herramienta = fragmento_herramienta.get("name", "")
+                argumentos = fragmento_herramienta.get("args", "")
                 
-                if tool_name:
-                    tool_call_str = f"\n\n< TOOL CALL: {tool_name} >\n\n"
-                if args:
-                    tool_call_str = args
+                if nombre_herramienta:
+                    cadena_llamada = f"\n\n< LLAMADA A HERRAMIENTA: {nombre_herramienta} >\n\n"
+                if argumentos:
+                    cadena_llamada = argumentos
 
-                yield tool_call_str
+                yield cadena_llamada
             else:
-                yield message_chunk.content
+                yield fragmento_mensaje.content
             continue
 
 
-async def upload_documents_to_qdrant(graph: StateGraph, data_folder: str = "data", collection_name: str = "knowledge_base"):
+async def cargar_documentos_a_qdrant(grafo: StateGraph, carpeta_datos: str = "data", nombre_coleccion: str = "knowledge_base"):
     """
-    Upload all documents from the data folder to Qdrant vector database.
+    Carga todos los documentos desde la carpeta de datos a la base de datos vectorial Qdrant.
     
     Args:
-        graph: The graph instance with MCP tools
-        data_folder: Path to the folder containing documents to upload
-        collection_name: Name of the Qdrant collection to store documents
+        grafo: La instancia del grafo con herramientas MCP
+        carpeta_datos: Ruta a la carpeta que contiene los documentos a cargar
+        nombre_coleccion: Nombre de la colección Qdrant para almacenar documentos
     """
-    data_path = Path(data_folder)
-    if not data_path.exists():
-        print(f"Data folder '{data_folder}' does not exist.")
+    ruta_datos = Path(carpeta_datos)
+    if not ruta_datos.exists():
+        print(f"La carpeta de datos '{carpeta_datos}' no existe.")
         return
     
-    # Supported file extensions
-    supported_extensions = {'.txt', '.md', '.py', '.json', '.csv', '.html', '.xml', '.docx', '.pdf'}
+    # Extensiones de archivo soportadas
+    extensiones_soportadas = {'.txt', '.md', '.py', '.json', '.csv', '.html', '.xml', '.docx', '.pdf'}
     
-    files_to_process = []
-    for file_path in data_path.rglob('*'):
-        if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
-            files_to_process.append(file_path)
+    archivos_a_procesar = []
+    for ruta_archivo in ruta_datos.rglob('*'):
+        if ruta_archivo.is_file() and ruta_archivo.suffix.lower() in extensiones_soportadas:
+            archivos_a_procesar.append(ruta_archivo)
     
-    if not files_to_process:
-        print(f"No supported documents found in '{data_folder}' folder.")
-        print(f"Supported extensions: {', '.join(supported_extensions)}")
+    if not archivos_a_procesar:
+        print(f"No se encontraron documentos compatibles en la carpeta '{carpeta_datos}'.")
+        print(f"Extensiones soportadas: {', '.join(extensiones_soportadas)}")
         return
     
-    print(f"Found {len(files_to_process)} documents to upload to Qdrant...")
+    print(f"Se encontraron {len(archivos_a_procesar)} documentos para cargar en Qdrant...")
     
-    for file_path in files_to_process:
+    for ruta_archivo in archivos_a_procesar:
         try:
-            # Read file content
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            # Leer contenido del archivo
+            with open(ruta_archivo, 'r', encoding='utf-8') as f:
+                contenido = f.read()
             
-            if not content.strip():
-                print(f"Skipping empty file: {file_path}")
+            if not contenido.strip():
+                print(f"Saltando archivo vacío: {ruta_archivo}")
                 continue
             
-            # Create a message asking the assistant to store the document
-            metadata_str = f"filename: {file_path.name}, filepath: {str(file_path)}, extension: {file_path.suffix}"
-            prompt = f"Please store this document in the Qdrant vector database with collection name '{collection_name}'. Document content: {content}\n\nMetadata: {metadata_str}"
+            # Crear un mensaje pidiendo al asistente que almacene el documento
+            metadata_str = f"nombre_archivo: {ruta_archivo.name}, ruta_archivo: {str(ruta_archivo)}, extension: {ruta_archivo.suffix}"
+            prompt = f"Por favor almacena este documento en la base de datos vectorial Qdrant con el nombre de colección '{nombre_coleccion}'. Contenido del documento: {contenido}\n\nMetadatos: {metadata_str}"
             
-            # Use the graph to process the request
-            response = await graph.ainvoke(
+            # Usar el grafo para procesar la solicitud
+            respuesta = await grafo.ainvoke(
                 AgentState(messages=[HumanMessage(content=prompt)]),
-                config={"configurable": {"thread_id": "document_upload"}}
+                config={"configurable": {"thread_id": "carga_documentos"}}
             )
             
-            print(f"✓ Processed: {file_path.name}")
+            print(f"✓ Procesado: {ruta_archivo.name}")
             
         except Exception as e:
-            print(f"✗ Failed to process {file_path.name}: {str(e)}")
+            print(f"✗ Error al procesar {ruta_archivo.name}: {str(e)}")
     
-    print(f"Document upload process completed!")
+    print(f"¡Proceso de carga de documentos completado!")
 
 
-async def search_documents_in_qdrant(graph: StateGraph, query: str, collection_name: str = "knowledge_base"):
+async def buscar_documentos_en_qdrant(grafo: StateGraph, consulta: str, nombre_coleccion: str = "knowledge_base"):
     """
-    Search for relevant documents in Qdrant based on a query.
+    Busca documentos relevantes en Qdrant basándose en una consulta.
     
     Args:
-        graph: The graph instance with MCP tools
-        query: The search query
-        collection_name: Name of the Qdrant collection to search
+        grafo: La instancia del grafo con herramientas MCP
+        consulta: La consulta de búsqueda
+        nombre_coleccion: Nombre de la colección Qdrant a buscar
         
     Returns:
-        Search results from Qdrant
+        Resultados de búsqueda desde Qdrant
     """
     try:
-        # Create a message asking the assistant to search documents
-        prompt = f"Please search the Qdrant vector database in collection '{collection_name}' for information related to: {query}"
+        # Crear un mensaje pidiendo al asistente que busque documentos
+        prompt = f"Por favor busca en la base de datos vectorial Qdrant en la colección '{nombre_coleccion}' información relacionada con: {consulta}"
         
-        # Use the graph to process the search request
-        response = await graph.ainvoke(
+        # Usar el grafo para procesar la solicitud de búsqueda
+        respuesta = await grafo.ainvoke(
             AgentState(messages=[HumanMessage(content=prompt)]),
-            config={"configurable": {"thread_id": "document_search"}}
+            config={"configurable": {"thread_id": "busqueda_documentos"}}
         )
         
-        return response
+        return respuesta
         
     except Exception as e:
-        print(f"Error searching documents: {str(e)}")
+        print(f"Error al buscar documentos: {str(e)}")
         return None
 
 
 async def main():
     """
-    Initialize the MCP client and run the agent conversation loop.
+    Inicializa el cliente MCP y ejecuta el bucle de conversación del agente.
 
-    The MultiServerMCPClient allows connection to multiple MCP servers using a single client and config.
+    El MultiServerMCPClient permite la conexión a múltiples servidores MCP usando un solo cliente y configuración.
     """
-    # Create the client without using it as a context manager
-    client = MultiServerMCPClient(
+    # Crear el cliente sin usarlo como administrador de contexto
+    cliente = MultiServerMCPClient(
         connections=mcp_config
     )
     
-    # Get tools using the new async method
-    tools = await client.get_tools()
-    graph = build_agent_graph(tools=tools)
+    # Obtener herramientas usando el nuevo método asíncrono
+    herramientas = await cliente.get_tools()
+    grafo = build_agent_graph(tools=herramientas)
 
-    # pass a config with a thread_id to use memory
-    graph_config = {
+    # pasar una configuración con thread_id para usar memoria
+    config_grafo = {
         "configurable": {
             "thread_id": "1"
         }
     }
 
-    print("MCP Agent with Qdrant Vector Database")
+    print("Agente MCP para gestión interna TIGO")
     print("=" * 50)
-    print("Available commands:")
-    print("  /upload     - Upload documents from data folder to Qdrant")
-    print("  /search     - Search documents in Qdrant")
-    print("  /help       - Show this help message")
-    print("  quit/exit   - Exit the program")
-    print("  Or just type your question to chat with the assistant")
+    # print("Comandos disponibles:")
+    # print("  /cargar     - Cargar documentos desde la carpeta data a Qdrant")
+    # print("  /buscar     - Buscar documentos en Qdrant")
+    # print("  /ayuda       - Mostrar este mensaje de ayuda")
+    print("  salir/exit   - Salir del programa")
+    print("  O simplemente escribe tu pregunta para conversar con el asistente")
     print("=" * 50)
 
     while True:
-        user_input = input("\nUSER: ").strip()
+        entrada_usuario = input("\nUSUARIO: ").strip()
         
-        if user_input.lower() in ["quit", "exit"]:
+        if entrada_usuario.lower() in ["salir", "exit"]:
             break
-        elif user_input == "/help":
-            print("\n Help:")
-            print("  /upload     - Upload all documents from the 'data' folder to Qdrant vector database")
-            print("  /search     - Search for information in the uploaded documents")
-            print("  quit/exit   - Exit the program")
-            print("  Or type any question to chat with the AI assistant")
+        elif entrada_usuario == "/ayuda":
+            print("\n Ayuda:")
+            # print("  /cargar     - Cargar todos los documentos desde la carpeta 'data' a la base de datos vectorial Qdrant")
+            # print("  /buscar     - Buscar información en los documentos cargados")
+            print("  salir/exit   - Salir del programa")
+            print("  O escribe cualquier pregunta para conversar con el asistente de IA")
             continue
-        elif user_input == "/upload":
-            print("\n Uploading documents to Qdrant...")
-            await upload_documents_to_qdrant(graph, data_folder="data", collection_name="knowledge_base")
+        elif entrada_usuario == "/cargar":
+            print("\n Cargando documentos a Qdrant...")
+            await cargar_documentos_a_qdrant(grafo, carpeta_datos="data", nombre_coleccion="knowledge_base")
             continue
-        elif user_input.startswith("/search "):
-            query = user_input[8:].strip()  # Remove "/search " prefix
-            if query:
-                print(f"\n Searching for: {query}")
-                print("\n ---- SEARCH RESULTS ----\n")
+        elif entrada_usuario.startswith("/buscar "):
+            consulta = entrada_usuario[8:].strip()  # Remover prefijo "/buscar "
+            if consulta:
+                print(f"\n Buscando: {consulta}")
+                print("\n ---- RESULTADOS DE BÚSQUEDA ----\n")
                 
-                async for response in stream_graph_response(
-                    input = AgentState(messages=[HumanMessage(content=f"Search the Qdrant vector database in collection 'knowledge_base' for information related to: {query}")]),
-                    graph = graph, 
-                    config = {"configurable": {"thread_id": "search"}}
+                async for respuesta in stream_graph_response(
+                    input = AgentState(messages=[HumanMessage(content=f"Busca en la base de datos vectorial Qdrant en la colección 'knowledge_base' información relacionada con: {consulta}")]),
+                    grafo = grafo, 
+                    config = {"configurable": {"thread_id": "busqueda"}}
                 ):
-                    print(response, end="", flush=True)
+                    print(respuesta, end="", flush=True)
                 print("\n")
             else:
-                print("Please provide a search query. Example: /search python functions")
+                print("Por favor proporciona una consulta de búsqueda. Ejemplo: /buscar funciones python")
             continue
-        elif user_input == "/search":
-            print("Please provide a search query. Example: /search python functions")
+        elif entrada_usuario == "/buscar":
+            print("Por favor proporciona una consulta de búsqueda. Ejemplo: /buscar funciones python")
             continue
-        elif user_input.startswith("/"):
-            print("Unknown command. Type /help for available commands.")
+        elif entrada_usuario.startswith("/"):
+            print("Comando desconocido. Escribe /ayuda para ver los comandos disponibles.")
             continue
 
-        print(f"\n ----  USER  ---- \n\n {user_input}")
-        print("\n ----  ASSISTANT  ---- \n\n")
+        print(f"\n ----  USUARIO  ---- \n\n {entrada_usuario}")
+        print("\n ----  ASISTENTE  ---- \n\n")
 
-        async for response in stream_graph_response(
-            input = AgentState(messages=[HumanMessage(content=user_input)]),
-            graph = graph, 
-            config = graph_config
+        async for respuesta in stream_graph_response(
+            #input = AgentState(messages=[HumanMessage(content=entrada_usuario)]),
+            entrada = AgentState(messages=[HumanMessage(content=entrada_usuario)]),
+            grafo = grafo, 
+            config = config_grafo
             ):
-            print(response, end="", flush=True)
+            print(respuesta, end="", flush=True)
 
 if __name__ == "__main__":
     import asyncio
-    # only needed if running in an ipykernel
+    # solo necesario si se ejecuta en un ipykernel
     import nest_asyncio
     nest_asyncio.apply()
 

@@ -22,20 +22,6 @@ Este proyecto implementa un agente conversacional inteligente que:
 - Google AI Studio API key
 - Qdrant (opcional, si se usa servidor externo)
 
-## Estructura del Proyecto
-
-```
-scout/
-├── graph.py           # Langgraph agent implementation
-├── client.py          # MCP client and streaming interface
-├── client_utils.py    # Utility functions
-├── main.py           # Entry point
-└── my_mcp/           # MCP server configurations
-    ├── config.py     # Config loading and env var resolution
-    ├── mcp_config.json # MCP server definitions
-    └── local_servers/ # Custom MCP server implementations
-```
-
 ## Instalación
 
 1. Clona el repositorio:
@@ -79,35 +65,13 @@ Este proyecto integra varios servidores MCP para diferentes funcionalidades:
 
 ## Uso
 
-1. Inicia la aplicación:
+1. Inicia la aplicación (entorno gráfico de streamlit):
 
 ```bash
-python -m scout.client
+python run_streamlit.py
 ```
 
-2. Interactúa con B2Bot usando los siguientes comandos:
-
-### Comandos Disponibles:
-
-- `/upload` - Carga todos los documentos de la carpeta `data/` a la base de datos vectorial Qdrant
-- `/search <consulta>` - Busca información en los documentos cargados
-- `/help` - Muestra la ayuda con comandos disponibles
-- `quit` o `exit` - Termina el programa
-
-### Ejemplos de uso:
-
-**Cargar documentos:**
-
-```
-USER: /upload
-```
-
-**Buscar información:**
-
-```
-USER: /search funciones de python
-USER: /search políticas de recursos humanos
-```
+Interactúa con B2Bot:
 
 **Conversación normal:**
 
@@ -173,7 +137,6 @@ Este proyecto fue modificado y adaptado del tutorial de kenneth-liao sobre agent
 - Migración a Mistral-7B con vLLM para mayor control local
 - Expansión de tipos de documentos soportados
 - Implementación de métricas de relevancia
-- Interfaz web para gestión de documentos
 
 ### Comentarios adicionales
 

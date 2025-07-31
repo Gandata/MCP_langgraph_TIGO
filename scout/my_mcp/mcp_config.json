@@ -17,6 +17,21 @@
             "EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2"
             },
             "transport": "stdio"
+        },
+        "datasetflow": {
+            "command": "python",
+            "args": [                
+                "C:\\Users\\usuario\\Desktop\\MCP agente\\MCP_langgraph_TIGO\\scout\\my_mcp\\local_servers\\datasetflow.py"
+            ],
+            "transport": "stdio"
+        }
+        ,
+        "math_mcp": {
+            "command": "python",
+            "args": [                
+                "C:\\Users\\usuario\\Desktop\\MCP agente\\MCP_langgraph_TIGO\\scout\\my_mcp\\local_servers\\math_mcp.py"
+            ],
+            "transport": "stdio"
         }
     }
 }
