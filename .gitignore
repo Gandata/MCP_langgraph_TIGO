@@ -14,6 +14,12 @@ wheels/
 
 # secrets
 .env
+service_account.json
 
 # node
 node_modules
+
+# folders
+.vscode/
+drive_structure/
+exports/

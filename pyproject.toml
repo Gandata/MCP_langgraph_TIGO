@@ -26,8 +26,11 @@ dependencies = [
     "scipy>=1.11.4",
     "matplotlib>=3.7.1",
     "seaborn>=0.12.2",
-    "streamlit>=1.28.0"
-
+    "streamlit>=1.28.0",
+    "google-api-python-client>=0.0.1",
+    "google-auth >= 0.0.0",
+    "google-auth-oauthlib >= 0.0.0",
+    "google-auth-httplib2 >= 0.0.0"
 ]
 
 [dependency-groups]
@@ -41,9 +44,3 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 packages = ["scout"]
-
-[tool.uv.workspace]
-members = [
-    "projects/test_rag_csv",
-    "projects/rag_test_csv",
-]
